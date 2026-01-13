@@ -42,15 +42,15 @@ function AppContent() {
     updateTask,
     deleteTask,
     undoDelete,
-    clearLastDeleted, // ✅ FIX FOR BUG 2
+    clearLastDeleted, // ✅ BUG 2 FIX
     lastDeleted,
   } = useTasksContext();
 
   const { user } = useUser();
 
   const [q, setQ] = useState('');
-  const [fStatus, setFStatus] = useState<string>('All');
-  const [fPriority, setFPriority] = useState<string>('All');
+  const [fStatus, setFStatus] = useState('All');
+  const [fPriority, setFPriority] = useState('All');
   const [activity, setActivity] = useState<ActivityItem[]>([]);
 
   const createActivity = useCallback(
@@ -66,16 +66,14 @@ function AppContent() {
     []
   );
 
-  // ✅ FIX BUG 2: clear deleted task when snackbar closes
-  const handleCloseUndo = useCallback(() => {
-    clearLastDeleted();
-  }, [clearLastDeleted]);
-
   const filtered = useMemo(() => {
     return derivedSorted.filter(t => {
-      if (q && !t.title.toLowerCase().includes(q.toLowerCase())) return false;
-      if (fStatus !== 'All' && t.status !== fStatus) return false;
-      if (fPriority !== 'All' && t.priority !== fPriority) return false;
+      if (q && !t.title.toLowerCase().includes(q.toLowerCase()))
+        return false;
+      if (fStatus !== 'All' && t.status !== fStatus)
+        return false;
+      if (fPriority !== 'All' && t.priority !== fPriority)
+        return false;
       return true;
     });
   }, [derivedSorted, q, fStatus, fPriority]);
@@ -83,9 +81,10 @@ function AppContent() {
   const handleAdd = useCallback(
     (payload: Omit<Task, 'id'>) => {
       addTask(payload);
-      setActivity(prev =>
-        [createActivity('add', `Added: ${payload.title}`), ...prev].slice(0, 50)
-      );
+      setActivity(p => [
+        createActivity('add', `Added: ${payload.title}`),
+        ...p,
+      ]);
     },
     [addTask, createActivity]
   );
@@ -93,12 +92,10 @@ function AppContent() {
   const handleUpdate = useCallback(
     (id: string, patch: Partial<Task>) => {
       updateTask(id, patch);
-      setActivity(prev =>
-        [
-          createActivity('update', `Updated: ${Object.keys(patch).join(', ')}`),
-          ...prev,
-        ].slice(0, 50)
-      );
+      setActivity(p => [
+        createActivity('update', 'Updated task'),
+        ...p,
+      ]);
     },
     [updateTask, createActivity]
   );
@@ -106,46 +103,50 @@ function AppContent() {
   const handleDelete = useCallback(
     (id: string) => {
       deleteTask(id);
-      setActivity(prev =>
-        [createActivity('delete', `Deleted task ${id}`), ...prev].slice(0, 50)
-      );
+      setActivity(p => [
+        createActivity('delete', 'Deleted task'),
+        ...p,
+      ]);
     },
     [deleteTask, createActivity]
   );
 
   const handleUndo = useCallback(() => {
     undoDelete();
-    setActivity(prev =>
-      [createActivity('undo', 'Undo delete'), ...prev].slice(0, 50)
-    );
+    setActivity(p => [
+      createActivity('undo', 'Undo delete'),
+      ...p,
+    ]);
   }, [undoDelete, createActivity]);
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
-      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
         <Stack spacing={3}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <Box>
-              <Typography variant="h3" fontWeight={700} gutterBottom>
+              <Typography variant="h3" fontWeight={700}>
                 TaskGlitch
               </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Welcome back, {user.name.split(' ')[0]}.
+              <Typography color="text.secondary">
+                Welcome back, {user.name.split(' ')[0]}
               </Typography>
             </Box>
+
             <Stack direction="row" spacing={2} alignItems="center">
               <Button
                 variant="outlined"
-                onClick={() => {
-                  const csv = toCSV(filtered);
-                  downloadCSV('tasks.csv', csv);
-                }}
+                onClick={() =>
+                  downloadCSV('tasks.csv', toCSV(filtered))
+                }
               >
                 Export CSV
               </Button>
-              <Avatar sx={{ width: 40, height: 40 }}>
-                {user.name.charAt(0)}
-              </Avatar>
+              <Avatar>{user.name.charAt(0)}</Avatar>
             </Stack>
           </Stack>
 
@@ -161,47 +162,54 @@ function AppContent() {
             <MetricsBar
               metricsOverride={{
                 totalRevenue: computeTotalRevenue(filtered),
-                totalTimeTaken: filtered.reduce((s, t) => s + t.timeTaken, 0),
-                timeEfficiencyPct: computeTimeEfficiency(filtered),
-                revenuePerHour: computeRevenuePerHour(filtered),
-                averageROI: computeAverageROI(filtered),
-                performanceGrade: computePerformanceGrade(
-                  computeAverageROI(filtered)
+                totalTimeTaken: filtered.reduce(
+                  (s, t) => s + t.timeTaken,
+                  0
                 ),
+                timeEfficiencyPct:
+                  computeTimeEfficiency(filtered),
+                revenuePerHour:
+                  computeRevenuePerHour(filtered),
+                averageROI:
+                  computeAverageROI(filtered),
+                performanceGrade:
+                  computePerformanceGrade(
+                    computeAverageROI(filtered)
+                  ),
               }}
             />
           )}
 
           {!loading && !error && (
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
-              alignItems={{ xs: 'stretch', sm: 'center' }}
-            >
+            <Stack direction="row" spacing={2}>
               <TextField
-                placeholder="Search by title"
+                placeholder="Search"
                 value={q}
                 onChange={e => setQ(e.target.value)}
                 fullWidth
               />
+
               <Select
                 value={fStatus}
                 onChange={e => setFStatus(e.target.value)}
-                sx={{ minWidth: 180 }}
               >
-                <MenuItem value="All">All Statuses</MenuItem>
+                <MenuItem value="All">All Status</MenuItem>
                 <MenuItem value="Todo">Todo</MenuItem>
-                <MenuItem value="In Progress">In Progress</MenuItem>
+                <MenuItem value="In Progress">
+                  In Progress
+                </MenuItem>
                 <MenuItem value="Done">Done</MenuItem>
               </Select>
+
               <Select
                 value={fPriority}
                 onChange={e => setFPriority(e.target.value)}
-                sx={{ minWidth: 180 }}
               >
-                <MenuItem value="All">All Priorities</MenuItem>
+                <MenuItem value="All">All Priority</MenuItem>
                 <MenuItem value="High">High</MenuItem>
-                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="Medium">
+                  Medium
+                </MenuItem>
                 <MenuItem value="Low">Low</MenuItem>
               </Select>
             </Stack>
@@ -216,14 +224,20 @@ function AppContent() {
             />
           )}
 
-          {!loading && !error && <ChartsDashboard tasks={filtered} />}
-          {!loading && !error && <AnalyticsDashboard tasks={filtered} />}
-          {!loading && !error && <ActivityLog items={activity} />}
+          {!loading && !error && (
+            <ChartsDashboard tasks={filtered} />
+          )}
+          {!loading && !error && (
+            <AnalyticsDashboard tasks={filtered} />
+          )}
+          {!loading && !error && (
+            <ActivityLog items={activity} />
+          )}
 
-          {/* ✅ BUG 2 FIX APPLIED */}
+          {/* ✅ BUG 2 FIX */}
           <UndoSnackbar
             open={!!lastDeleted}
-            onClose={handleCloseUndo}
+            onClose={clearLastDeleted}
             onUndo={handleUndo}
           />
         </Stack>
