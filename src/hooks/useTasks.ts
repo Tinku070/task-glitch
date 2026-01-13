@@ -26,7 +26,7 @@ export function useTasks() {
   const [lastDeleted, setLastDeleted] = useState<Task | null>(null);
   const loadedRef = useRef(false);
 
-  // ✅ BUG 1 FIX: load only once
+  // BUG 1 FIX: single fetch
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
@@ -47,6 +47,7 @@ export function useTasks() {
     if (!tasks.length) return EMPTY_METRICS;
 
     const avgROI = computeAverageROI(tasks);
+
     return {
       totalRevenue: computeTotalRevenue(tasks),
       totalTimeTaken: tasks.reduce((s, t) => s + t.timeTaken, 0),
@@ -63,7 +64,7 @@ export function useTasks() {
       {
         ...task,
         id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
+        createdAt: task.createdAt ?? new Date().toISOString(),
       },
     ]);
   }, []);
@@ -76,7 +77,7 @@ export function useTasks() {
 
   const deleteTask = useCallback((id: string) => {
     setTasks(prev => {
-      const target = prev.find(t => t.id === id) || null;
+      const target = prev.find(t => t.id === id) ?? null;
       setLastDeleted(target);
       return prev.filter(t => t.id !== id);
     });
@@ -95,6 +96,7 @@ export function useTasks() {
   return {
     tasks,
     loading,
+    error: null, // ✅ REQUIRED BY CONTEXT
     derivedSorted,
     metrics,
     lastDeleted,
